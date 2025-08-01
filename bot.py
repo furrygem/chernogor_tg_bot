@@ -1,6 +1,7 @@
 import os
 import logging
 import random
+import re
 from telethon import TelegramClient, events
 from dotenv import load_dotenv
 
@@ -37,6 +38,12 @@ ZAPOVEDI = [
     "Когда увидишь где едят и пьют - присоединяйся, а когда увидишь где работают - уходи, чтобы не мешать",
 ]
 
+TRIGGER_WORDS = [
+    r'\bраб\w*',
+    r'\bработа\w*',
+    r'\bработать\w*',
+]
+
 def get_random_message():
     """Random message getter function"""
     choice = random.randint(0, 2)
@@ -46,6 +53,15 @@ def get_random_message():
         return random.choice(ZAPOVEDI)
     else:
         return f"{random.choice(QUOTES)}. Мой тебе совет: {random.choice(ZAPOVEDI)}"
+
+def contains_work_words(text):
+    if not text:
+        return False
+    text_lower = text.lower()
+    for pattern in WORK_WORDS:
+        if re.search(pattern, text_lower):
+            return True
+    return False
 
 @client.on(events.NewMessage(pattern=r'^@\w+'))
 async def handle_ping(event):
@@ -58,14 +74,22 @@ async def handle_ping(event):
     except Exception as e:
         logger.error(f"Error handling ping: {e}")
 
-@client.on(events.NewMessage(pattern=r'^/start'))
-async def handle_start(event):
-    """Handle /start"""
+@client.on(events.NewMessage())
+async def handle_work_words(event):
     try:
-        await event.reply("Hello! I'm a simple bot. Ping me with @username to see me reply!")
-        logger.info(f"Start command from {event.sender_id}")
+        if event.message.reply_to:
+            return
+
+        if event.message.mentioned:
+            return
+
+        message_text = event.message.text
+        if message_text and contains_work_words(message_text):
+            response = random.choice(ZAPOVEDI)
+            await event.reply(response)
+            logger.info(f"Replied to work-related message from {event.sender_id}: '{message_text[:50]}...'")
     except Exception as e:
-        logger.error(f"Error handling start: {e}")
+        logger.error(f"Error handling work words: {e}")
 
 @client.on(events.NewMessage())
 async def handle_reply(event):
