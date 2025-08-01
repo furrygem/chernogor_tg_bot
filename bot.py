@@ -58,7 +58,7 @@ def contains_work_words(text):
     if not text:
         return False
     text_lower = text.lower()
-    for pattern in WORK_WORDS:
+    for pattern in TRIGGER_WORDS:
         if re.search(pattern, text_lower):
             return True
     return False
